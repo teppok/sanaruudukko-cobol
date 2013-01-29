@@ -5,11 +5,22 @@
   
   Deployment guide for COBOL backend
   
-  See src/README.src.txt for source code overview.
+  1. Introduction
+
+    This is the COBOL backend for the game Sanaruudukko (Word grid).
+  This backend handles CGI requests from the HTTP server, interacts
+  with the database, performs program logic and returns data in
+  a freeform XML format.
+
+    The html-javascript side of the program is an another application
+  in another repository (sanaruudukko-web).
+
+    File src/README.txt has a couple of insights into the source code.
+
+    The program uses libpq for database connectivity, so it contains
+  rather much Postgresql specific library calls.
   
-  
-  
-  1. Easy installation
+  2. Easy installation
   
     1) Create a database for Postgresql.
 	2) Alter src/init.cob and src/registerp.cob PQconnect calls to your database parameters.

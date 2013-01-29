@@ -53,6 +53,17 @@
   is not easy and considering the program's currently small audience and small impact, fixing
   them is not a priority.
   
-  
-  
+  5. Function documentation.
+
+    Function documentation refers to Standard arguments. These are:
+  pgconn pointer for the connection and contents of 'init.l' file
+  (player pic x(16), passcode pic x(16), roomid pic 9(5) and 
+  roundid pic 9(5)).
+
+    Each function documentation lists the arguments the function actually 
+  uses to read values from and the arguments the function modifies. The
+  latter must thus be called with BY REFERENCE. Functions don't return
+  any values. Also dependencies on other functions are listed.
+
+    
   
