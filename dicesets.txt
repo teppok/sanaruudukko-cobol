@@ -1,0 +1,39 @@
+       01 dices.
+	     02 dice-values.
+		   03 filler pic x(6) value "AISBUJ".
+		   03 filler pic x(6) value "AEENEA".
+		   03 filler pic x(6) value "aIoNST".
+		   03 filler pic x(6) value "ANPFSK".
+		   03 filler pic x(6) value "APHSKO".
+		   03 filler pic x(6) value "DESRIL".
+		   03 filler pic x(6) value "EIENUS".
+		   03 filler pic x(6) value "HIKNMU".
+		   03 filler pic x(6) value "AGAaLa".
+		   03 filler pic x(6) value "CIOTMU".
+		   03 filler pic x(6) value "AJTOTO".
+		   03 filler pic x(6) value "EITOSS".
+		   03 filler pic x(6) value "ELYTTR".
+		   03 filler pic x(6) value "AKITMV".
+		   03 filler pic x(6) value "AILKVY".
+		   03 filler pic x(6) value "ALRNNU".
+
+		   
+		   nopat toisesta bogglesta:
+		   
+		   03 filler pic x(6) value "NIIDEE".
+           03 filler pic x(6) value "SUTPNR".
+           03 filler pic x(6) value "MESIKP".
+           03 filler pic x(6) value "ToINEJ".
+           03 filler pic x(6) value "KOJLAI".
+           03 filler pic x(6) value "LSMTKE".
+           03 filler pic x(6) value "TEHYVU".
+           03 filler pic x(6) value "AITOaN".
+           
+           03 filler pic x(6) value "LAENKH".
+           03 filler pic x(6) value "SINMOR".
+           03 filler pic x(6) value "ONaATF".
+           03 filler pic x(6) value "LEKAaB".
+           03 filler pic x(6) value "AAOAAa".
+           03 filler pic x(6) value "SSYTUV".
+           03 filler pic x(6) value "ITNAIa".
+           03 filler pic x(6) value "NSUILT".

@@ -1,0 +1,88 @@
+
+DROP TABLE Chat;
+DROP TABLE Words;
+DROP TABLE Rounds;
+DROP TABLE Players;
+DROP TABLE Rooms;
+DROP TABLE WordList;
+
+CREATE TABLE Rooms (
+  Id INTEGER NOT NULL,
+  Name Varchar(16) NOT NULL,
+  PRIMARY KEY (Id));
+  
+CREATE TABLE Rounds (
+  RoundNum SERIAL NOT NULL,
+  RoundStart Timestamp NOT NULL,
+  Board Char(16) NOT NULL,
+  RoomId INTEGER NOT NULL,
+  PRIMARY KEY (RoundNum),
+  FOREIGN KEY (RoomId) REFERENCES Rooms(Id));
+  
+CREATE TABLE Players (
+  Name Varchar(16) NOT NULL,
+  PassCode Varchar(16) NOT NULL,
+  RoomId INTEGER,
+  Ready BOOLEAN NOT NULL,
+  LastSeen Timestamp NOT NULL,
+  NewWords BOOLEAN NOT NULL,
+  NewRound BOOLEAN NOT NULL,
+  MoreTime BOOLEAN NOT NULL,
+  LastChat INTEGER NOT NULL,
+  PRIMARY KEY (Name),
+  FOREIGN KEY (RoomId) REFERENCES Rooms(Id));
+  
+CREATE TABLE Words (
+  RoundId INTEGER NOT NULL,
+  RoomId INTEGER NOT NULL,
+  Player Varchar(16) NOT NULL,
+  Word Varchar(16) NOT NULL,
+  Languagecheck Boolean NOT NULL,
+  Disabled Boolean NOT NULL,
+  PRIMARY KEY (RoundId, RoomId, Word, Player),
+  FOREIGN KEY (RoundId) REFERENCES Rounds(RoundNum),
+  FOREIGN KEY (RoomId) REFERENCES Rooms(Id),
+  FOREIGN KEY (Player) REFERENCES Players(Name));
+
+CREATE TABLE Chat (
+  Id SERIAL NOT NULL,
+  ChatTime TIMESTAMP NOT NULL,
+  RoomId INTEGER NOT NULL,
+  Player Varchar(16) NOT NULL,
+  ChatRow Varchar(256) NOT NULL,
+  PRIMARY KEY (Id),
+  FOREIGN KEY (RoomId) REFERENCES Rooms(Id),
+  FOREIGN KEY (Player) REFERENCES Players(Name));
+  
+
+CREATE TEMP TABLE TMP ( word varchar(80), PRIMARY KEY (word) );
+
+\COPY TMP FROM '/home/teppo/sanat-use-new.txt'
+
+DELETE FROM Tmp WHERE Length(Word) > 16;
+DELETE FROM Tmp WHERE Length(Word) < 3;
+DELETE FROM Tmp WHERE Word LIKE '%-%' OR
+  WORD LIKE '%0%' OR
+  WORD LIKE '%1%' OR
+  WORD LIKE '%2%' OR
+  WORD LIKE '%3%' OR
+  WORD LIKE '%4%' OR
+  WORD LIKE '%5%' OR
+  WORD LIKE '%6%' OR
+  WORD LIKE '%7%' OR
+  WORD LIKE '%8%' OR
+  WORD LIKE '%9%';
+ALTER TABLE TMP ALTER COLUMN Word TYPE varchar(16);
+ALTER TABLE Tmp ADD COLUMN language CHAR(2);
+UPDATE Tmp SET language='FI';
+
+CREATE TABLE WordList ( word, language ) AS (SELECT word, language FROM tmp);
+
+GRANT ALL ON TABLE Chat TO "www-data";
+GRANT ALL ON TABLE Rooms TO "www-data";
+GRANT ALL ON TABLE Rounds TO "www-data";
+GRANT ALL ON TABLE Players TO "www-data";
+GRANT ALL ON TABLE Words TO "www-data";
+GRANT ALL ON TABLE WordList TO "www-data";
+GRANT ALL ON SEQUENCE rounds_roundnum_seq TO "www-data";
+GRANT ALL ON SEQUENCE chat_id_seq TO "www-data";
