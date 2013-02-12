@@ -9,7 +9,7 @@
         *>               checkword to check if the word is in the table
 
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. allwords.
+       PROGRAM-ID. getallwords.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        
@@ -19,6 +19,9 @@
        01 resstr pic x(80) based.
        01 querystring pic x(256).
 
+       01 RoundOk usage binary-long.
+       
+       
        01 NWords usage binary-long.
        01 WordIdx usage binary-long.
        
@@ -30,30 +33,23 @@
        01 Board PIC x(16) VALUES SPACES.
        01 ListWord pic x(16).
 
+       01 RoundStatus pic x.
+         88 RoundFinished value "f".
+         88 RoundContinues value "t".
+
        LINKAGE SECTION.
        01 pgconn usage pointer.
-       01 RoundId pic 99999 usage display.
+       COPY "init.l".
        
-       PROCEDURE DIVISION USING pgconn, RoundId.
+       PROCEDURE DIVISION USING pgconn, Player, RoomId, RoundId.
        Begin.
-
-       string "SELECT Board FROM Rounds WHERE RoundId = ", RoundId, " ;", x"00" INTO QueryString
-          call "PQexec" using
-           by value pgconn
-           by reference querystring
-           returning pgres
-       end-call
-
-       call "PQgetvalue" using
-        by value pgres
-           by value 0
-           by value 0
-           returning resptr
-       end-call
-       set address of resstr to resptr
-       string resstr delimited by x"00" into Board end-string
+       CALL "roundstatus" USING BY REFERENCE pgconn Player RoomId RoundId RoundStatus.
        
-       STRING "SELECT Word from WordList WHERE Language = 'FI';", x"00" INTO QueryString
+       IF RoundContinues THEN
+         EXIT PROGRAM
+       END-IF
+
+       STRING "SELECT Word from ValidWords WHERE RoundId = ", RoundId, "; ", x"00" INTO QueryString
        END-STRING
           call "PQexec" using by value pgconn
             by reference querystring
@@ -72,23 +68,7 @@
                move SPACES to ListWord
                string resstr delimited by x"00" into ListWord end-string
 
-               CALL "checkword" using
-                 by content Board
-                 by content ListWord
-                 By reference LoopStatus
-               END-CALL
-               
-               IF ValidWord THEN
-                   STRING "INSERT INTO ValidWords (Word, RoundId) VALUES ('", function trim(ListWord), "', ", RoundId,  ");", x"00" INTO QueryString
-                   END-STRING
-                      call "PQexec" using by value pgconn
-                        by reference querystring
-                        returning pgres2
-                   end-call
-
-        *>          DISPLAY "<word>", function trim(ListWord), "</word>"
-               END-IF
-               
+               DISPLAY "<word>", function trim(ListWord), "</word>"
         END-PERFORM
 
         EXIT PROGRAM.

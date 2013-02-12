@@ -29,7 +29,7 @@
          EXIT PROGRAM
        END-IF
        
-       string "SELECT Roundstart + interval '3 minutes' >= now() FROM Rounds WHERE RoundNum = ", RoundId, 
+       string "SELECT Roundstart + interval '3 minutes' >= now() FROM Rounds WHERE RoundId = ", RoundId, 
               " AND RoomId = ", RoomId, ";", x"00" INTO QueryString
        call "PQexec" using
            by value pgconn

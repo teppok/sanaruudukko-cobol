@@ -59,7 +59,7 @@
        string resstr delimited by x"00" into Tmp end-string
        MOVE Tmp TO RoomId.
        
-       String "Select max(RoundNum) From Rounds where RoomId = ", function trim(RoomId), ";", x"00" INTO querystring
+       String "Select max(RoundId) From Rounds where RoomId = ", function trim(RoomId), ";", x"00" INTO querystring
        END-STRING
           call "PQexec" using
            by value pgconn

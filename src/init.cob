@@ -1,7 +1,7 @@
         *> -------------------------
         *> init.
         *> Takes: Player, Passcode
-        *> Initializes the database and checks that the username and password match.
+        *> Checks that the username and password match.
         *>   After that, calls getround to initialize RoomId and RoundId to their proper values.
         *> Modifies: RoomId, RoundId
         *> Dependencies: getround
@@ -22,11 +22,6 @@
         COPY "init.l".
        PROCEDURE DIVISION USING pgconn, Player, Passcode, RoomId, RoundId.
 
-       call "PQconnectdb" using
-           by reference "dbname = test" & x"00"
-           returning pgconn
-       end-call
-       
        String "Select Name From Players where Name = '", function trim(player), "' AND PassCode = '", function trim(passcode), "';", x"00" INTO querystring
        END-STRING
           call "PQexec" using

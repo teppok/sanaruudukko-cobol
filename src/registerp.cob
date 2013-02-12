@@ -3,8 +3,6 @@
         *> Takes: Player name, Passcode.
         *> If the player name doesn't exist in the database, create a new player
         *>   with the supplied passcode.
-        *>   This routine is called before init.cob, so we shall initialize our
-        *>   own db connection and then close it.
         *> Modifies:
         *> Dependencies: 
         
@@ -13,7 +11,6 @@
        DATA DIVISION.
 	   WORKING-STORAGE SECTION.
 	   
-       01 pgconn usage pointer.
        01 pgres  usage pointer.
        01 resptr usage pointer.
        01 resstr pic x(80) based.
@@ -24,16 +21,12 @@
 	   01 playertest usage binary-long value 0.
 
        LINKAGE SECTION.
+       01 pgconn usage pointer.
        COPY "init.l".
        
        
-       PROCEDURE DIVISION USING Player, PassCode.
+       PROCEDURE DIVISION USING pgconn, Player, PassCode.
        Begin.
-
-  	   call "PQconnectdb" using
-           by reference "dbname = test" & x"00"
-           returning pgconn
-       end-call
 
        String "SELECT Name FROM Players WHERE Name = '", function trim(Player), "';", x"00" into Querystring
        END-STRING
@@ -55,7 +48,5 @@
                  end-call
 	   END-IF
                
-	   call "PQfinish" using by value pgconn returning result end-call
-
        EXIT PROGRAM.
 	   

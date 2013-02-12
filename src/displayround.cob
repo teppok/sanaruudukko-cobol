@@ -29,13 +29,20 @@
            03 CurrentSecMill.
              04 CurrentSeconds PIC 9(2).
              04 CurrentHunds PIC 9(2).
-       01 RoundTimestamp.
-         02 RoundIntegerDate    PIC 9(7).
-         02 RoundTime.
-           03 RoundHours PIC 9(2).
-           03 RoundMinutes PIC 9(2).
-           03 RoundSeconds PIC 9(2).
-           03 RoundHunds PIC 9(2).
+       01 SRoundTimestamp.
+         02 SRoundIntegerDate    PIC 9(7).
+         02 SRoundTime.
+           03 SRoundHours PIC 9(2).
+           03 SRoundMinutes PIC 9(2).
+           03 SRoundSeconds PIC 9(2).
+           03 SRoundHunds PIC 9(2).
+       01 ERoundTimestamp.
+         02 ERoundIntegerDate    PIC 9(7).
+         02 ERoundTime.
+           03 ERoundHours PIC 9(2).
+           03 ERoundMinutes PIC 9(2).
+           03 ERoundSeconds PIC 9(2).
+           03 ERoundHunds PIC 9(2).
        01 SqlTimestamp.
          02 Sqlyear pic 9999.
          02 filler pic x.
@@ -52,8 +59,10 @@
          02 Sqlhunds pic 99.
          02 filler pic 999.
 
-       01 NewRoundState pic 9 VALUE 0.
-         88 StartNewRound VALUE 1.
+       01 RoundState pic 9 VALUE 0.
+         88 RoundContinues VALUE 0.
+         88 RoundEnded VALUE 1.
+         88 RoundStarting VALUE 2.
          
        01 RemainingMinutes PIC s9(2).
        01 RemainingSeconds PIC s9(2).
@@ -72,11 +81,13 @@
        ACCEPT TmpDate FROM DATE YYYYMMDD.
        MOVE FUNCTION INTEGER-OF-DATE(TmpDate) to CurrentIntegerDate.
        ACCEPT CurrentTime FROM TIME.
+
+       SET RoundContinues TO TRUE
        
        IF RoundId IS = HIGH-VALUES THEN
-              SET StartNewRound TO TRUE
+              SET RoundEnded TO TRUE
        ELSE
-          STRING "SELECT RoundStart FROM ROUNDS where RoundNum = ", RoundId, ";", x"00" INTO QueryString
+          STRING "SELECT RoundStart FROM ROUNDS where RoundId = ", RoundId, ";", x"00" INTO QueryString
           END-STRING
           call "PQexec" using by value pgconn
             by reference querystring
@@ -95,29 +106,31 @@
            Move SqlYear to TmpYear
            Move SqlMonth to Tmpmonth
            Move SqlDay to Tmpday
-           COMPUTE RoundIntegerdate = function Integer-Of-Date(TmpDate)
-           Move SqlHours to RoundHours
-           Move SqlMinutes to RoundMinutes
-           Move SqlSeconds to RoundSeconds
-           Move SqlHunds to RoundHunds
-           
-       *>    display roundtimestamp
-           
-           ADD 3 TO RoundMinutes
+           COMPUTE SRoundIntegerdate = function Integer-Of-Date(TmpDate)
+           Move SqlHours to SRoundHours
+           Move SqlMinutes to SRoundMinutes
+           Move SqlSeconds to SRoundSeconds
+           Move SqlHunds to SRoundHunds
 
-           PERFORM FixRoundTime
-
-           IF CurrentTimestamp > Roundtimestamp THEN
-             SET StartNewRound TO TRUE
+           MOVE SRoundTimeStamp TO ERoundTimeStamp
+           ADD 3 TO ERoundMinutes
+           PERFORM FixERoundTime
+           
+           IF CurrentTimeStamp < SRoundTimeStamp
+             SET RoundStarting TO TRUE
+           END-IF
+           
+           IF CurrentTimestamp > ERoundtimestamp THEN
+             SET RoundEnded TO TRUE
            END-IF
 
        END-IF
        DISPLAY "<round>"
 
-       IF NOT StartNewRound THEN
-           COMPUTE RemainingMinutes = RoundMinutes - CurrentMinutes
-           COMPUTE RemainingSeconds = RoundSeconds - CurrentSeconds
-           COMPUTE RemainingHunds = RoundHunds - CurrentHunds
+       IF RoundContinues THEN
+           COMPUTE RemainingMinutes = ERoundMinutes - CurrentMinutes
+           COMPUTE RemainingSeconds = ERoundSeconds - CurrentSeconds
+           COMPUTE RemainingHunds = ERoundHunds - CurrentHunds
            *>  DISPLAY RemainingMinutes
            *>  DISPLAY RemainingSeconds
            *>  DISPLAY RemainingHunds
@@ -142,8 +155,29 @@
              DISPLAY "<time>", PrintHunds, "</time>"
       END-IF
 
-      IF RoundId IS NOT = HIGH-VALUES THEN
-           STRING "SELECT Board FROM Rounds where roundnum = ", RoundId, ";", x"00" INTO QueryString
+      IF RoundStarting THEN
+           COMPUTE RemainingMinutes = SRoundMinutes - CurrentMinutes
+           COMPUTE RemainingSeconds = SRoundSeconds - CurrentSeconds
+           COMPUTE RemainingHunds = SRoundHunds - CurrentHunds
+             IF RemainingHunds < 0 THEN
+               SUBTRACT 1 FROM RemainingSeconds
+               ADD 100 to RemainingHunds
+             END-IF
+             IF RemainingSeconds < 0 THEN
+               SUBTRACT 1 FROM RemainingMinutes
+                 ADD 60 TO RemainingSeconds
+             END-IF
+             IF RemainingMinutes < 0 THEN
+               ADD 60 to RemainingMinutes
+             END-IF
+
+             COMPUTE PrintHunds = (RemainingMinutes * 60 + RemainingSeconds) * 100 + RemainingHunds
+             DISPLAY "<time>", PrintHunds, "</time>"
+             DISPLAY "<starting>1</starting>"
+      END-IF
+      
+      IF RoundId IS NOT = HIGH-VALUES AND (RoundContinues OR RoundEnded) THEN
+           STRING "SELECT Board FROM Rounds where RoundId = ", RoundId, ";", x"00" INTO QueryString
            END-STRING
            call "PQexec" using
                by value pgconn
@@ -169,12 +203,12 @@
        
        EXIT PROGRAM.
        
-       FixRoundTime.
-       IF ROUNDMINUTES > 59 THEN 
-         ADD 1 TO ROUNDHOURS
-         SUBTRACT 60 FROM ROUNDMINUTES
+       FixERoundTime.
+       IF EROUNDMINUTES > 59 THEN 
+         ADD 1 TO EROUNDHOURS
+         SUBTRACT 60 FROM EROUNDMINUTES
        END-IF.
-       IF ROUNDHOURS > 23 THEN
-         ADD 1 TO ROUNDINTEGERDATE
-         SUBTRACT 24 FROM ROUNDHOURS
+       IF EROUNDHOURS > 23 THEN
+         ADD 1 TO EROUNDINTEGERDATE
+         SUBTRACT 24 FROM EROUNDHOURS
        END-IF.

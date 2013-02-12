@@ -101,6 +101,14 @@
                  returning pgres
              end-call
 
+           STRING "DELETE FROM ValidWords WHERE RoundId IN (SELECT RoundId FROM Rounds WHERE RoomId = ", NewRoomId, " ) ;", x"00" INTO Querystring
+           END-String
+             call "PQexec" using
+                 by value pgconn
+                 by reference querystring
+                 returning pgres
+             end-call
+
            STRING "DELETE FROM Words WHERE RoomId = ", NewRoomId, ";", x"00" INTO Querystring
            END-String
              call "PQexec" using

@@ -4,10 +4,8 @@
         *> This is called from NewRound. This subprogram checks if the round has ended
         *>   and if it has, increments the round counter and initializes the board with
         *>   a new randomized board.
-        *>   This routine is not thread safe in a sense that two players may enter initround
-        *>   simultaneously. However, they get different new round values from the database
-        *>   (nextval() is assumed to be an atomic operation), so the round that the first
-        *>   player initializes gets overwritten by the round from the second player.
+        *>   This round is thread-safe, it uses database table Status value 'Initializing'
+        *>   for some rudimentary binary semaphore communication.
         *> Modifies:
         *> Dependencies: 
         
@@ -65,14 +63,29 @@
        
        01 Tmp pic x(8) value SPACES.
        
+      
+       01 InitOk pic x(8) value SPACES.
+
+       01 statusvalue pic 9.
+         88 DoContinue value 1.
+
+       01 PreRoundTime pic 99999 usage display.
+       
        LINKAGE SECTION.
        01 pgconn usage pointer.
        01 Player pic x(16).
        01 RoomId pic 99999 usage display.
        01 RoundId pic 99999 usage display.
+       01 NewRoundStatus pic x.
+         88 NewRoundStarted value "t".
 
-       PROCEDURE DIVISION USING pgconn, Player, RoomId, RoundId.
+       PROCEDURE DIVISION USING pgconn, Player, RoomId, RoundId, NewRoundStatus.
        Begin.
+       MOVE "f" tO NewRoundStatus
+       
+       MOVE 0 to Statusvalue
+       PERFORM CheckInitNewRound UNTIL DoContinue
+       
        STRING "SELECT Ready FROM PLAYERS WHERE LastSeen + interval '20 seconds' > now() AND RoomId = ", RoomId, ";", x"00" INTO QueryString
        END-STRING
        call "PQexec" using
@@ -82,6 +95,12 @@
        end-call
        
        call "PQntuples" using by value pgres returning Nplayers
+       
+       IF Nplayers > 1 THEN
+         MOVE 10 to PreRoundTime
+       ELSE
+         MOVE 5 to PreRoundTime
+       END-IF
        
        Set TotalReadyStateTrue TO True
        PERFORM VARYING PlayerIdx FROM 0 BY 1 UNTIL (PlayerIdx >= NPlayers OR TotalReadyStateFalse)
@@ -102,10 +121,45 @@
         IF TotalReadyStateTrue THEN
             PERFORM InitNewRound
         END-IF
+        
+       string "UPDATE Status SET Value = '0' WHERE Name = 'Initializing'", x"00" INTO querystring
+       END-STRING
+       
+       call "PQexec" using
+            by value pgconn
+            by reference querystring
+            returning pgres
+       end-call
+        
+        
        EXIT PROGRAM.
 
+       CheckInitNewRound.
+       string "UPDATE Status SET Value = '1' WHERE Name = 'Initializing' AND Value = '0'; ", x"00" INTO querystring
+       END-STRING
+       
+       call "PQexec" using
+            by value pgconn
+            by reference querystring
+            returning pgres
+       end-call
+       
+       call "PQcmdTuples" using by value pgres returning resptr
+       set address of resstr to resptr
+       MOVE SPACES TO InitOk
+       string resstr delimited by x"00" into InitOk end-string
+       
+       IF InitOk IS > 0 THEN
+         SET DoContinue TO TRUE
+       ELSE
+          call "CBL_OC_NANOSLEEP" using "500" & "000000" end-call
+       END-IF.
+       
+      
        InitNewRound.
-       PERFORM RandomizeBoard.
+       Set NewRoundStarted TO TRUE
+       
+       PERFORM RandomizeBoard
        STRING "SELECT nextval('rounds_roundnum_seq');", x"00" INTO QueryString
        END-STRING
        call "PQexec" using
@@ -125,7 +179,9 @@
        string resstr delimited by x"00" into Tmp end-string
        MOVE Tmp TO RoundId
 
-       string "insert into rounds ( roundnum, roundstart, board, roomid ) values ( ", RoundId, ", now(), '", Board, "', ", RoomId, " ) ;", x"00" INTO querystring
+     
+       string "insert into rounds ( roundid, roundstart, board, roomid ) values ( ", RoundId, ", now() + interval '", PreRoundTime, 
+         " seconds', '", Board, "', ", RoomId, " ) ;", x"00" INTO querystring
        END-STRING
 
        call "PQexec" using
@@ -142,7 +198,7 @@
             by reference querystring
             returning resptr
        end-call.
-
+     
        
        RandomizeBoard.
        ACCEPT CurrentTime FROM TIME.

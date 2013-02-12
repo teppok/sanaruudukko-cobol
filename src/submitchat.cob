@@ -92,6 +92,8 @@
          STOP RUN
        END-IF
        
+       CALL "getdb" USING BY REFERENCE pgconn
+       
        CALL "init" USING 
          By reference pgconn 
          By reference Player

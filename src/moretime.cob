@@ -53,7 +53,7 @@
        *>   Roundstart -- 2 minutes -- 1 minute
        *>                                sallittua lisätä aikaa vain 1 minuutti ennen loppua.
        
-       string "SELECT Roundstart + interval '2 minutes' >= now() FROM Rounds WHERE RoundNum = ", RoundId, 
+       string "SELECT Roundstart + interval '2 minutes' >= now() FROM Rounds WHERE RoundId = ", RoundId, 
               " AND RoomId = ", RoomId, ";", x"00" INTO QueryString
        call "PQexec" using
            by value pgconn
@@ -114,7 +114,7 @@
 
         InitMoreTime.
         STRING "UPDATE Rounds SET RoundStart = RoundStart + interval '2 minutes' WHERE ",
-               " RoundNum = ", RoundId, 
+               " RoundId = ", RoundId, 
                " AND RoomId = ", RoomId, ";", x"00" INTO QueryString
         call "PQexec" using
            by value pgconn

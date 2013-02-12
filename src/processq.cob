@@ -20,7 +20,16 @@
 	   
        01 pgconn usage pointer.
        01 result usage binary-long.
-	   
+       01 pgres  usage pointer.
+       01 querystring pic x(256).
+       
+       01 pid usage binary-long.
+       01 sid usage binary-long.
+       01 pgconn2 usage pointer.
+       01 pgconn3 usage pointer.
+       01 zerovalue usage binary-long value 0.
+
+  
        COPY "init.l".
 
        01 Func pic x(16).
@@ -32,6 +41,9 @@
        
        01 NewWords pic x VALUE "f".
          88 NewWordsReceived VALUE "t".
+         
+       01 NewRoundStatus pic x value "f".
+         88 NewRoundStarted value "t".
 
        PROCEDURE DIVISION.
        Begin.
@@ -64,11 +76,13 @@
           By reference Word
        END-CALL
 
-  *> 	   MOVE "Teppo" TO Player
+  *>     MOVE "Teppo" TO Player
   *>     MOVE "A" TO Passcode
-  *>     MOVE "moretime" to Func
+  *>     MOVE "newround" to Func
+  *>     ACCEPT Func FROM ARGUMENT-VALUE
   *>     MOVE "test" to RoomName
-       
+
+ 
        IF Func IS = SPACES THEN
               DISPLAY "<data><status>100</status></data>"
               STOP RUN
@@ -94,9 +108,16 @@
              STOP RUN
        END-IF
 
+       CALL "getdb" USING BY REFERENCE pgconn
+
+    *>   STRING "INSERT INTO Status VALUES ('", function trim(Func), "', now());", x"00" INTO QueryString
+    *>   call "PQexec" using by value pgconn
+    *>     by reference querystring
+    *>     returning pgres
+    *>   end-call
        
        IF Func IS = "registerp" THEN
-           CALL "registerp" USING Player, PassCode
+           CALL "registerp" USING pgconn, Player, PassCode
        END-IF
 
        CALL "init" USING 
@@ -107,13 +128,20 @@
          By Reference RoundId
        END-CALL
 
+    *>   MOVE 102 to RoundId
+       
+    *>   CALL "allwords" USING BY REFERENCE pgconn, RoundId.
+    *>   CALL "getallwords" USING BY REFERENCE pgconn Player RoomId RoundId.
+    *>   DISPLAY "exit"
+    *>   STOP RUN.
+       
        IF Player IS = HIGH-VALUES THEN
           DISPLAY "<data><status>1</status></data>"
           call "PQfinish" using by value pgconn returning result end-call
           STOP RUN
        END-IF
 
-       IF RoomId IS = HIGH-VALUES AND ( Func IS = "moretime" OR "newround" OR "removeword" OR "submitword" OR "wordwaiter" OR "allwords" ) THEN
+       IF RoomId IS = HIGH-VALUES AND ( Func IS = "moretime" OR "newround" OR "removeword" OR "submitword" OR "wordwaiter" OR "allwords" OR "displayround") THEN
           DISPLAY "<data><status>5</status></data>"
           call "PQfinish" using by value pgconn returning result end-call
           STOP RUN
@@ -128,7 +156,7 @@
        DISPLAY "<data>"
 
        *> In theory these procedures should not display any data.
-       *> They only perform actions.
+       *> They only perform actions. Except allwords, which displays words.
        
        EVALUATE Func
          WHEN "moretime" PERFORM MoreTime
@@ -168,7 +196,7 @@
                 END-CALL
            END-IF
 
-           IF Func IS = "joinroom" OR "newroom" OR "registerp" OR "newround" OR "wordwaiter" THEN
+           IF Func IS = "joinroom" OR "newroom" OR "registerp" OR "newround" OR "wordwaiter" OR "displayround" THEN
                CALL "displayround" USING
                  BY REFERENCE pgconn
                  BY CONTENT RoundId
@@ -197,14 +225,82 @@
         DISPLAY "</data>"
         
         call "PQfinish" using by value pgconn returning result end-call
-       
+        
        STOP RUN.
 
        MoreTime.
         CALL "moretime" USING BY REFERENCE pgconn Player RoomId RoundId.
 
         NewRound.
-        CALL "newround" USING BY REFERENCE pgconn Player RoomId RoundId.
+        CALL "newround" USING BY REFERENCE pgconn Player RoomId RoundId
+        CALL "initround" USING
+          BY REFERENCE pgconn
+          BY CONTENT Player
+          BY CONTENT RoomId
+          BY REFERENCE RoundID
+          BY REFERENCE NewRoundStatus
+        END-CALL
+        
+        IF NewRoundStarted THEN
+           CALL "fork" RETURNING pid
+           
+           IF pid < 0 THEN
+             DISPLAY "<status>Forking failure</status>"
+             STOP RUN
+           END-IF
+           
+           IF pid IS = 0 THEN
+
+               CALL "umask" USING BY VALUE zerovalue
+               
+               CALL "setsid" RETURNING sid
+               
+               IF sid < 0 THEN
+                 DISPLAY "<status>Forking failure</status>"
+                 STOP RUN
+               END-IF
+
+           *>    CALL "fork" RETURNING pid
+           *>    
+           *>    IF pid IS NOT = 0 THEN
+           *>      STOP RUN
+           *>    END-IF
+               
+               call "close_pipes"
+               CALL "getdb" USING BY REFERENCE pgconn2
+               CALL "allwords" USING BY REFERENCE pgconn2, RoundId
+               call "PQfinish" using by value pgconn2 returning result end-call
+
+               STOP RUN
+           END-IF
+           
+          CALL "fork" RETURNING pid
+           
+           IF pid < 0 THEN
+             DISPLAY "<status>Forking failure</status>"
+             STOP RUN
+           END-IF
+           
+           IF pid IS = 0 THEN
+
+               CALL "umask" USING BY VALUE zerovalue
+               
+               CALL "setsid" RETURNING sid
+               
+               IF sid < 0 THEN
+                 DISPLAY "<status>Forking failure</status>"
+                 STOP RUN
+               END-IF
+               
+               call "close_pipes"
+               CALL "getdb" USING BY REFERENCE pgconn3
+               CALL "roundstartwaiter" USING BY REFERENCE pgconn3 Player RoomId RoundId
+               call "PQfinish" using by value pgconn3 returning result end-call
+
+               STOP RUN
+           END-IF
+        END-IF.
+
 
        JoinRoom.
        CALL "joinroom" USING BY REFERENCE pgconn Player RoomId RoundId Room.
@@ -232,5 +328,5 @@
         CALL "wordwaiter" USING BY REFERENCE pgconn Player RoomId RoundId NewWords NewChat.
         
         AllWords.
-        CALL "allwords" USING BY REFERENCE pgconn Player RoomId RoundId.
+        CALL "getallwords" USING BY REFERENCE pgconn Player RoomId RoundId.
         

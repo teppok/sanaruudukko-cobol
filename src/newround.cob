@@ -27,7 +27,6 @@
 
        PROCEDURE DIVISION USING pgconn, Player, RoomId, RoundId.
        Begin.
-
        CALL "roundstatus" USING BY REFERENCE pgconn Player RoomId RoundId RoundStatus.
        
        IF RoundContinues THEN
@@ -50,13 +49,6 @@
                returning resptr
         end-call
         
-        CALL "initround" USING
-          BY REFERENCE pgconn
-          BY CONTENT Player
-          BY CONTENT RoomId
-          BY REFERENCE RoundID
-        END-CALL
-
      *> RoundEnded vain signaloi kierroksen lopussa
      *> kierroksen loppu: saadaan kellosta
      *> kierroksen alku: updatoidaan muuten vain newwordsia

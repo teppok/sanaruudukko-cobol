@@ -43,7 +43,10 @@
          
        PROCEDURE DIVISION USING pgconn, Player, RoomId, RoundId, NewWords, NewChat.
        Begin.
-
+       MOVE "f" TO NewWords
+       MOVE "f" TO NewChat
+       MOVE "f" TO NewRound
+       
        MOVE 0 TO Looped
        PERFORM WITH TEST BEFORE UNTIL ( NewWordsReceived OR NewChatReceived OR NewRoundStarted OR Looped > 75 )
               STRING "SELECT NewWords from Players WHERE Name = '", function trim(Player), "';", x"00" INTO QueryString

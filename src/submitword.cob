@@ -69,7 +69,7 @@
                 END-IF
 
                
-               string "SELECT Board FROM Rounds WHERE RoundNum = ", RoundId, 
+               string "SELECT Board FROM Rounds WHERE RoundId = ", RoundId, 
                       "AND Roundstart + interval '3 minutes' >= now() ",
                       "AND RoomId = ", RoomId, ";", x"00" INTO QueryString
                   call "PQexec" using
