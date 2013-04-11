@@ -54,7 +54,19 @@ CREATE TABLE Chat (
   FOREIGN KEY (RoomId) REFERENCES Rooms(Id),
   FOREIGN KEY (Player) REFERENCES Players(Name));
   
+CREATE TABLE ValidWords (
+  Word varchar(16) NOT NULL,
+  RoundId Integer NOT NULL,
+  FOREIGN KEY (RoundId) References Rounds(RoundId),
+  PRIMARY KEY (Word, RoundId));
 
+CREATE TABLE Status (
+  Name varchar(16) NOT NULL,
+  Value varchar(64) NOT NULL);
+  
+INSERT INTO Status VALUES ( 'Initializing', 0 );
+  
+  
 CREATE TEMP TABLE TMP ( word varchar(80), PRIMARY KEY (word) );
 
 \COPY TMP FROM '/home/teppo/sanat-use-new.txt'
@@ -84,5 +96,7 @@ GRANT ALL ON TABLE Rounds TO "www-data";
 GRANT ALL ON TABLE Players TO "www-data";
 GRANT ALL ON TABLE Words TO "www-data";
 GRANT ALL ON TABLE WordList TO "www-data";
+GRANT ALL ON TABLE ValidWords TO "www-data";
+GRANT ALL ON TABLE Status TO "www-data";
 GRANT ALL ON SEQUENCE rounds_roundnum_seq TO "www-data";
 GRANT ALL ON SEQUENCE chat_id_seq TO "www-data";
